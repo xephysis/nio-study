@@ -1,4 +1,4 @@
-package me.xep;
+package me.xep.test1;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;

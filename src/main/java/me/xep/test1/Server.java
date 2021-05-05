@@ -1,4 +1,4 @@
-package me.xep;
+package me.xep.test1;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -51,7 +51,11 @@ public class Server {
         while (true) {
             try {
                 //blocking
-                selector.select();
+                var keyCount = selector.select();
+
+                if (keyCount == 0) {
+                    continue;
+                }
 
                 //not thread safe
                 Set<SelectionKey> selectionKeySet = selector.selectedKeys();
@@ -65,6 +69,8 @@ public class Server {
                     } else if (selectionKey.isReadable()) {
                         read(selectionKey);
                     }
+                    //이 작업은 왜 필요한거지 어짜피 한번만 순회할텐데
+                    selectionKeyIterator.remove();
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -72,6 +78,7 @@ public class Server {
         }
     }
 
+    //accept 대기 상태인 key 를 받아다가 key 의 채널을 추출한 뒤, accept 를 수행하고 OP_READ로 등록
     private void accept(SelectionKey selectionKey) {
         //type safety 를 보장할 수 없나
         ServerSocketChannel serverSocketChannel = (ServerSocketChannel) selectionKey.channel();
@@ -93,6 +100,7 @@ public class Server {
         }
     }
 
+    //read 대기 상태인 key 를 받아다가 direct buffer 를 만들어서 read 한 뒤, broadcast
     private void read(SelectionKey selectionKey) {
         SocketChannel socketChannel = (SocketChannel) selectionKey.channel();
         ByteBuffer byteBuffer = ByteBuffer.allocateDirect(1024);
@@ -112,6 +120,7 @@ public class Server {
         broadcast(byteBuffer);
         byteBuffer.clear();
     }
+
     private void broadcast(ByteBuffer byteBuffer) {
         //바이트 버퍼 다 채워졌으니 사용하지 전에 flip 해서 limit 을 당겨둠
         byteBuffer.flip();
@@ -121,7 +130,7 @@ public class Server {
             //do nothing
             e.printStackTrace();
         }
-
+        //byte buffer 를 매번 재활용 하는것보다 그냥 String 으로 만들어 놓고 쓰는게 더 나을것 같음
         byteBuffer.rewind();
 
         Iterator<SocketChannel> clientsIterator = clientSocketChannels.iterator();
